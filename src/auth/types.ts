@@ -21,6 +21,8 @@ export type UserProfile = {
   subject?: string;
   preferredUsername?: string;
   name?: string;
+  givenName?: string;
+  familyName?: string;
   email?: string;
   nucleus?: unknown;
   organization?: unknown;
@@ -37,6 +39,9 @@ export type TokenSnapshot = {
   accessToken: string | null;
   idToken: string | null;
   refreshToken: string | null;
+  accessTokenParsed: Record<string, unknown> | null;
+  idTokenParsed: Record<string, unknown> | null;
+  refreshTokenParsed: Record<string, unknown> | null;
 };
 
 export type TokenRefreshEvent = {
@@ -61,6 +66,7 @@ export type AuthContextValue = {
   authorizationTokenMocked: boolean;
   tokens: TokenSnapshot;
   inactivityRemainingMs: number | null;
+  accessTokenExpiresInMs: number | null;
   lastTokenRefresh: TokenRefreshEvent | null;
   error: string | null;
   login: () => Promise<void>;

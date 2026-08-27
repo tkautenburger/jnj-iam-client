@@ -11,7 +11,13 @@ import React, {
   useRef,
   useState
 } from "react";
-import { createMockAuthorizationToken, expiresWithin, normalizeAuthorizationToken, readAuthorizationClaims } from "./jwt";
+import {
+  createMockAuthorizationToken,
+  expiresWithin,
+  normalizeAuthorizationToken,
+  readAuthorizationClaims,
+  tryDecodeJwt
+} from "./jwt";
 import type {
   AuthContextValue,
   AuthStatus,
@@ -49,9 +55,13 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
   const [tokens, setTokens] = useState<TokenSnapshot>({
     accessToken: null,
     idToken: null,
-    refreshToken: null
+    refreshToken: null,
+    accessTokenParsed: null,
+    idTokenParsed: null,
+    refreshTokenParsed: null
   });
   const [inactivityRemainingMs, setInactivityRemainingMs] = useState<number | null>(null);
+  const [accessTokenExpiresInMs, setAccessTokenExpiresInMs] = useState<number | null>(null);
   const [lastTokenRefresh, setLastTokenRefresh] = useState<TokenRefreshEvent | null>(null);
   const [lastActivityAt, setLastActivityAt] = useState(() => Date.now());
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
@@ -123,11 +133,17 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
 
   const syncTokenSnapshot = useCallback(() => {
     const keycloak = keycloakRef.current;
+    const accessToken = keycloak?.token ?? null;
+    const idToken = keycloak?.idToken ?? null;
+    const refreshToken = keycloak?.refreshToken ?? null;
 
     setTokens({
-      accessToken: keycloak?.token ?? null,
-      idToken: keycloak?.idToken ?? null,
-      refreshToken: keycloak?.refreshToken ?? null
+      accessToken,
+      idToken,
+      refreshToken,
+      accessTokenParsed: tryDecodeJwt(accessToken ?? undefined),
+      idTokenParsed: tryDecodeJwt(idToken ?? undefined),
+      refreshTokenParsed: tryDecodeJwt(refreshToken ?? undefined)
     });
   }, []);
 
@@ -302,7 +318,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
           return;
         }
 
-        setUser(getProfile(keycloak.tokenParsed));
+        setUser(getProfile(keycloak.idTokenParsed));
         syncTokenSnapshot();
         try {
           await requestAuthorizationToken();
@@ -399,6 +415,32 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
 
   useEffect(() => {
     if (status !== "authenticated") {
+      setAccessTokenExpiresInMs(null);
+      return;
+    }
+
+    const updateExpiry = () => {
+      const expiresAtSeconds = keycloakRef.current?.tokenParsed?.exp;
+
+      if (!expiresAtSeconds) {
+        setAccessTokenExpiresInMs(null);
+        return;
+      }
+
+      setAccessTokenExpiresInMs(Math.max(expiresAtSeconds * 1000 - Date.now(), 0));
+    };
+
+    updateExpiry();
+    const timer = window.setInterval(updateExpiry, INACTIVITY_DISPLAY_UPDATE_MS);
+
+    return () => {
+      window.clearInterval(timer);
+      setAccessTokenExpiresInMs(null);
+    };
+  }, [lastTokenRefresh, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
       return;
     }
 
@@ -446,6 +488,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       authorizationTokenMocked: config.mockAuthorizationToken,
       tokens,
       inactivityRemainingMs,
+      accessTokenExpiresInMs,
       lastTokenRefresh,
       error,
       login,
@@ -459,6 +502,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     }),
     [
       authenticatedFetch,
+      accessTokenExpiresInMs,
       authorizationClaims,
       config.mockAuthorizationToken,
       ensureValidAccessToken,
@@ -511,6 +555,8 @@ function getProfile(parsedToken?: KeycloakTokenParsed): UserProfile {
     subject: parsedToken.sub,
     preferredUsername: parsedToken.preferred_username,
     name: parsedToken.name,
+    givenName: parsedToken.given_name,
+    familyName: parsedToken.family_name,
     email: parsedToken.email,
     nucleus: parsedToken.nucleus,
     organization: parsedToken.organization

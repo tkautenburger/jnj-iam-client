@@ -21,6 +21,30 @@ function decodeJwtPayload(token: string): JwtPayload {
   return JSON.parse(decodeBase64Url(parts[1])) as JwtPayload;
 }
 
+export function decodeJwt(token: string): { header: JwtPayload; payload: JwtPayload } {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Token is not a JWT");
+  }
+
+  return {
+    header: JSON.parse(decodeBase64Url(parts[0])) as JwtPayload,
+    payload: JSON.parse(decodeBase64Url(parts[1])) as JwtPayload
+  };
+}
+
+export function tryDecodeJwt(token?: string): { header: JwtPayload; payload: JwtPayload } | null {
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return decodeJwt(token);
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeAuthorizationToken(headerValue: string): string {
   const value = headerValue.trim();
 

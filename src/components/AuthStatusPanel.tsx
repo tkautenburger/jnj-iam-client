@@ -29,6 +29,7 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
             </div>
             <div className="status-metrics">
               <Metric label="Idle" value={formatDuration(auth.inactivityRemainingMs)} />
+              <Metric label="Access Exp" value={formatDuration(auth.accessTokenExpiresInMs)} />
               <Metric
                 label="Refresh"
                 value={auth.lastTokenRefresh ? `${auth.lastTokenRefresh.refreshedAt} (${auth.lastTokenRefresh.source})` : "none"}
@@ -105,9 +106,9 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
               lastTokenRefresh: auth.lastTokenRefresh
             }}
           />
-          <TokenCard title="Access Token" value={auth.tokens.accessToken} />
-          <TokenCard title="ID Token" value={auth.tokens.idToken} />
-          <TokenCard title="Refresh Token" value={auth.tokens.refreshToken} />
+          <TokenCard title="Access Token" value={auth.tokens.accessTokenParsed} />
+          <TokenCard title="ID Token" value={auth.tokens.idTokenParsed} />
+          <TokenCard title="Refresh Token" value={auth.tokens.refreshTokenParsed} />
         </section>
       )}
 

@@ -55,11 +55,16 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Show the current access token in the reference UI.
 - [x] Show the current ID token in the reference UI.
 - [x] Show the current refresh token in the reference UI.
+- [x] Display token tiles as decoded JWT header/payload JSON.
+- [x] Show access-token expiry countdown in the reference UI.
+- [x] Update displayed access-token expiry countdown every 5 seconds.
 - [x] Show background token refresh timestamp/source in the reference UI.
 - [x] Use a compact diagnostic layout with dense status/config grids.
 - [x] Keep long token values inside fixed-height scroll areas.
 - [x] Implement a centralized browser API client that sends `Authorization` and `X-Authorization`.
 - [x] Decode the Polyphonic authorization token for frontend convenience claims where needed.
+- [x] Derive profile information from the ID token.
+- [x] Include `name`, `given_name`, and `family_name` in the displayed profile.
 - [x] Mark authorization claims as mocked when mock authorization-token mode is enabled.
 - [x] Do not parse Keycloak `resource_access` in frontend authorization logic.
 - [x] Implement configurable inactivity timeout.

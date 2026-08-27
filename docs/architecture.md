@@ -163,11 +163,11 @@ await keycloak.updateToken(30);
 
 Failure to refresh a token shall transition the application into an unauthenticated state and trigger the defined re-authentication or logout behavior.
 
-The reference application includes a diagnostic token view for local validation. It displays the current access token, ID token, and refresh token as read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
+The reference application includes a diagnostic token view for local validation. It displays the current access token, ID token, and refresh token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
 
-The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
+The diagnostic token view shall decode the current JWTs and display their header and payload as JSON clear text. The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
 
-The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI.
+The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI. The UI shall also display the access-token expiry countdown and update it every 5 seconds.
 
 The existing Okta implementation stores authentication tokens in `localStorage`. The Keycloak implementation intentionally changes this behavior:
 
@@ -310,6 +310,8 @@ AuthProvider
 ```
 
 React business components shall depend on this abstraction rather than importing the `keycloak-js` client directly. This isolates IAM-specific behavior and simplifies testing and future IAM changes.
+
+User profile data exposed by the reference authentication abstraction is derived from the ID token, not the access token. The reference profile includes `sub`, `preferred_username`, `name`, `given_name`, `family_name`, `email`, and any relevant Polyphonic claims such as `nucleus`.
 
 ### Next.js Client Integration
 
