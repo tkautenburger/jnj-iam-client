@@ -39,6 +39,42 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
   const [lastActivityAt, setLastActivityAt] = useState(() => Date.now());
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 
+  function formatAuthError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    if (error && typeof error === "object") {
+      const record = error as Record<string, unknown>;
+      const keycloakMessage = [record.error, record.error_description].filter(Boolean).join(": ");
+
+      if (keycloakMessage) {
+        return keycloakMessage;
+      }
+
+      try {
+        return JSON.stringify(record, null, 2);
+      } catch {
+        return "Authentication failed with a non-serializable error object";
+      }
+    }
+
+    return String(error);
+  }
+
+  function isNoSsoSessionError(error: unknown): boolean {
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+
+    const record = error as Record<string, unknown>;
+    return record.error === "login_required" || record.error === "interaction_required";
+  }
+
   const login = useCallback(async () => {
     await keycloakRef.current?.login({
       redirectUri: config.redirectUri,
@@ -78,7 +114,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     try {
       await keycloak.updateToken(TOKEN_REFRESH_LEEWAY_SECONDS);
     } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+      setError(formatAuthError(refreshError));
       await login();
       throw refreshError;
     }
@@ -155,7 +191,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     try {
       return await requestAuthorizationToken();
     } catch (authorizationError) {
-      enterAccessDenied(authorizationError instanceof Error ? authorizationError.message : String(authorizationError));
+      enterAccessDenied(formatAuthError(authorizationError));
       throw authorizationError;
     }
   }, [enterAccessDenied, requestAuthorizationToken]);
@@ -206,13 +242,20 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       keycloakRef.current = keycloak;
 
       try {
-        const authenticated = await keycloak.init({
-          onLoad: "check-sso",
-          pkceMethod: "S256",
+        const initOptions = {
+          onLoad: "check-sso" as const,
+          pkceMethod: "S256" as const,
           checkLoginIframe: false,
           redirectUri: config.redirectUri,
-          silentCheckSsoRedirectUri: config.silentCheckSsoRedirectUri,
-          scope: config.scope
+          scope: config.scope,
+          ...(config.silentCheckSsoEnabled
+            ? {
+                silentCheckSsoRedirectUri: config.silentCheckSsoRedirectUri
+              }
+            : {})
+        };
+        const authenticated = await keycloak.init({
+          ...initOptions
         });
 
         if (!authenticated) {
@@ -228,13 +271,22 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
         try {
           await requestAuthorizationToken();
         } catch (authorizationError) {
-          enterAccessDenied(authorizationError instanceof Error ? authorizationError.message : String(authorizationError));
+          enterAccessDenied(formatAuthError(authorizationError));
           return;
         }
 
         setStatus("authenticated");
       } catch (initError) {
-        setError(initError instanceof Error ? initError.message : String(initError));
+        if (isNoSsoSessionError(initError)) {
+          setStatus("unauthenticated");
+          await keycloak.login({
+            redirectUri: config.redirectUri,
+            scope: config.scope
+          });
+          return;
+        }
+
+        setError(formatAuthError(initError));
         setStatus("error");
       }
     }

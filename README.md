@@ -32,6 +32,7 @@ EXT_JNJ_IAM_REALM_NAME=phnc-dev
 EXT_JNJ_IAM_CLIENT_ID=phnc-test-app
 EXT_JNJ_IAM_SCOPE="openid profile email nucleus"
 EXT_JNJ_IAM_POST_LOGOUT_REDIRECT_URI=http://localhost:3000/
+EXT_JNJ_IAM_SILENT_CHECK_SSO_ENABLED=false
 EXT_JNJ_TMS_V2_ROOT_URL=http://localhost:3000
 EXT_JNJ_TENANT_ID=
 EXT_JNJ_MOCK_AUTHORIZATION_TOKEN=true
@@ -43,6 +44,8 @@ EXT_JNJ_IAM_INACTIVITY_WARNING_TIMEOUT=60000
 ```
 
 These defaults match the local `jnj-iam` realm import conventions. Browser app clients use `/signin` as the login redirect path, `/sso-signin` as the silent SSO redirect path, and the application root URL as the post-logout redirect URI.
+
+Silent SSO is configurable and defaults to disabled in the reference app because iframe-based silent checks are sensitive to browser cookie policy and local TLS/hostname setup. With silent SSO disabled, `check-sso` can still perform a non-interactive prompt=none redirect; if Keycloak reports `login_required`, the app starts the normal hosted login flow.
 
 `EXT_JNJ_MOCK_AUTHORIZATION_TOKEN=true` lets the reference app run without a TMSv2 backend. The generated token is an unsigned JWT-shaped test token and must not be used as a production authorization artifact.
 

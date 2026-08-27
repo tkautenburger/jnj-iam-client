@@ -6,6 +6,7 @@ export type PublicAuthConfig = {
   redirectUri: string;
   postLogoutRedirectUri: string;
   silentCheckSsoRedirectUri: string;
+  silentCheckSsoEnabled: boolean;
   tmsV2RootUrl: string;
   tenantId?: string;
   mockAuthorizationToken: boolean;

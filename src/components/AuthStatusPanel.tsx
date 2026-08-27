@@ -46,6 +46,10 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
               <dd>{config.silentCheckSsoRedirectUri}</dd>
             </div>
             <div>
+              <dt>Silent SSO</dt>
+              <dd>{config.silentCheckSsoEnabled ? "enabled" : "disabled"}</dd>
+            </div>
+            <div>
               <dt>TMSv2 URL</dt>
               <dd>{config.tmsV2RootUrl}</dd>
             </div>

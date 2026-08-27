@@ -112,6 +112,8 @@ The `check-sso` authentication method itself shall not force an interactive logi
 
 Keycloak documents `check-sso` as authenticating only when an existing Keycloak login is available. Silent `check-sso` can avoid a visible full-page redirect by using `silentCheckSsoRedirectUri`, but it is subject to modern browser third-party-cookie restrictions.
 
+The reference implementation makes silent SSO configurable and disables it by default for local/test reliability. If Keycloak returns a `login_required` or `interaction_required` result from a non-interactive SSO check, the frontend shall treat that as "no usable SSO session" and start the normal hosted login flow instead of rendering an authentication error.
+
 Each application shall receive a token set issued specifically for its own OIDC client. Tokens shall never be copied, shared, or transferred between Polyphonic applications.
 
 Embedded Keycloak login pages (iframe) should not be used. Interactive authentication shall use redirect-based OIDC authentication and a Polyphonic Keycloak theme for consistent branding. Iframes are limited to Keycloak-supported non-interactive SSO/session-check mechanisms.
@@ -586,6 +588,7 @@ The following values should be configurable:
 | `EXT_JNJ_IAM_REDIRECT_URI`                  | Application URI to which Keycloak redirects the browser after authentication. Pattern: `${root-url}/signin`.                                         |
 | `EXT_JNJ_IAM_POST_LOGOUT_REDIRECT_URI`      | Application URI to which Keycloak redirects the browser after logout. Pattern: `${root-url}/`.                                                       |
 | `EXT_JNJ_IAM_SILENT_CHECK_SSO_REDIRECT_URI` | URI used by `keycloak-js` for silent SSO checks without an interactive login prompt. Pattern: `${root-url}/sso-signin`.                              |
+| `EXT_JNJ_IAM_SILENT_CHECK_SSO_ENABLED`      | Enables iframe-based silent SSO checks. Defaults to `false` in the reference implementation for local/test reliability.                              |
 | `EXT_JNJ_IAM_USER_INACTIVITY_TIMEOUT`       | Configurable period of user inactivity after which the application initiates logout and terminates the Keycloak SSO session, defaults to 15 minutes. |
 | `EXT_JNJ_TMS_V2_ROOT_URL`                   | Base URL of the TMSv2 backend service used to request the Polyphonic authorization token.                                                            |
 | `EXT_JNJ_TENANT_ID`                         | Optional tenant identifier appended to the TMSv2 authorization-token request as `tenantId`.                                                          |

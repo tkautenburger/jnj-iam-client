@@ -37,6 +37,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Model auth states explicitly: initializing, authenticated, unauthenticated, access denied, error, logging out.
 - [x] Initialize Keycloak with Authorization Code Flow and PKCE `S256`.
 - [x] Run `check-sso` on startup, then call `login()` automatically if no SSO session is available.
+- [x] Treat `login_required` and `interaction_required` from SSO checks as no-session results that trigger hosted login.
 - [x] Add `/signin` handling for login redirects.
 - [x] Add `/sso-signin` handling for silent SSO redirects.
 - [x] Configure logout with post-logout redirect to `${root-url}/`.
@@ -65,6 +66,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Make explicit logout and inactivity logout use the same centralized logout path.
 - [x] Add access-denied behavior for failed application-access checks.
 - [x] Externalize all IAM, TMSv2, redirect, silent SSO, and inactivity settings.
+- [x] Make iframe-based silent SSO configurable and disabled by default for local/test reliability.
 - [x] Externalize mock authorization-token settings.
 - [x] Read public Next.js runtime configuration from server-side environment variables.
 - [x] Pass only serializable non-secret public configuration into the browser auth boundary.

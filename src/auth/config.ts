@@ -61,6 +61,7 @@ export function getPublicAuthConfig(): PublicAuthConfig {
     redirectUri: process.env.EXT_JNJ_IAM_REDIRECT_URI ?? `${rootUrl}/signin`,
     postLogoutRedirectUri: process.env.EXT_JNJ_IAM_POST_LOGOUT_REDIRECT_URI ?? `${rootUrl}/`,
     silentCheckSsoRedirectUri: process.env.EXT_JNJ_IAM_SILENT_CHECK_SSO_REDIRECT_URI ?? `${rootUrl}/sso-signin`,
+    silentCheckSsoEnabled: readBoolean("EXT_JNJ_IAM_SILENT_CHECK_SSO_ENABLED", false),
     tmsV2RootUrl: process.env.EXT_JNJ_TMS_V2_ROOT_URL ?? rootUrl,
     tenantId: process.env.EXT_JNJ_TENANT_ID,
     mockAuthorizationToken: readBoolean("EXT_JNJ_MOCK_AUTHORIZATION_TOKEN", true),
