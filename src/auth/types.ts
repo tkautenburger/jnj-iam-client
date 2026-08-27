@@ -33,6 +33,17 @@ export type AuthorizationClaims = {
   exp: number;
 };
 
+export type TokenSnapshot = {
+  accessToken: string | null;
+  idToken: string | null;
+  refreshToken: string | null;
+};
+
+export type TokenRefreshEvent = {
+  refreshedAt: string;
+  source: "background" | "api" | "manual";
+};
+
 export type AuthStatus =
   | "initializing"
   | "authenticated"
@@ -47,12 +58,16 @@ export type AuthContextValue = {
   authenticated: boolean;
   user: UserProfile | null;
   authorizationClaims: AuthorizationClaims | null;
+  authorizationTokenMocked: boolean;
+  tokens: TokenSnapshot;
+  inactivityRemainingMs: number | null;
+  lastTokenRefresh: TokenRefreshEvent | null;
   error: string | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   getAccessToken: () => Promise<string>;
   getAuthorizationToken: () => Promise<string>;
-  ensureValidAccessToken: () => Promise<string>;
+  ensureValidAccessToken: (source?: TokenRefreshEvent["source"]) => Promise<string>;
   ensureValidAuthorizationToken: () => Promise<string>;
   authenticatedFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   recordActivity: () => void;

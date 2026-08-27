@@ -10,7 +10,7 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
 
   async function refreshTokens() {
     setTokenCheckResult(null);
-    await auth.ensureValidAccessToken();
+    await auth.ensureValidAccessToken("manual");
     await auth.ensureValidAuthorizationToken();
     setTokenCheckResult(new Date().toLocaleTimeString());
   }
@@ -22,8 +22,20 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
     >
       <section className="panel">
         <div>
-          <p className="label">Connection</p>
-          <h2>{getStatusLabel(auth.status)}</h2>
+          <div className="status-row">
+            <div>
+              <p className="label">Connection</p>
+              <h2>{getStatusLabel(auth.status)}</h2>
+            </div>
+            <div className="status-metrics">
+              <Metric label="Idle" value={formatDuration(auth.inactivityRemainingMs)} />
+              <Metric
+                label="Refresh"
+                value={auth.lastTokenRefresh ? `${auth.lastTokenRefresh.refreshedAt} (${auth.lastTokenRefresh.source})` : "none"}
+              />
+              <Metric label="Authz" value={config.mockAuthorizationToken ? "mock" : "TMSv2"} />
+            </div>
+          </div>
           <dl className="details">
             <div>
               <dt>Keycloak URL</dt>
@@ -54,10 +66,6 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
               <dd>{config.tmsV2RootUrl}</dd>
             </div>
             <div>
-              <dt>Authorization Mode</dt>
-              <dd>{config.mockAuthorizationToken ? "mock" : "TMSv2"}</dd>
-            </div>
-            <div>
               <dt>Tenant</dt>
               <dd>{config.tenantId ?? "default"}</dd>
             </div>
@@ -82,15 +90,24 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
       {auth.status === "authenticated" && (
         <section className="grid">
           <TokenCard title="Profile" value={auth.user} />
-          <TokenCard title="Authorization Claims" value={auth.authorizationClaims} />
+          <TokenCard
+            title={`Authorization Claims${auth.authorizationTokenMocked ? " (mocked)" : ""}`}
+            value={auth.authorizationClaims}
+          />
           <TokenCard
             title="Session Policy"
             value={{
               inactivityTimeoutMs: config.inactivityTimeoutMs,
               inactivityWarningMs: config.inactivityWarningMs,
-              tokenRefreshLeewaySeconds: 30
+              inactivityRemainingMs: auth.inactivityRemainingMs,
+              tokenRefreshLeewaySeconds: 30,
+              backgroundTokenCheckMs: 5000,
+              lastTokenRefresh: auth.lastTokenRefresh
             }}
           />
+          <TokenCard title="Access Token" value={auth.tokens.accessToken} />
+          <TokenCard title="ID Token" value={auth.tokens.idToken} />
+          <TokenCard title="Refresh Token" value={auth.tokens.refreshToken} />
         </section>
       )}
 
@@ -123,8 +140,17 @@ function TokenCard({ title, value }: { title: string; value: unknown }) {
   return (
     <article className="token-card">
       <h2>{title}</h2>
-      <pre>{JSON.stringify(value ?? null, null, 2)}</pre>
+      <pre>{typeof value === "string" ? value : JSON.stringify(value ?? null, null, 2)}</pre>
     </article>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -143,4 +169,16 @@ function getStatusLabel(status: string): string {
     default:
       return "Authentication error";
   }
+}
+
+function formatDuration(valueMs: number | null): string {
+  if (valueMs === null) {
+    return "not active";
+  }
+
+  const totalSeconds = Math.ceil(valueMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }

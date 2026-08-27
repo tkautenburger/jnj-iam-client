@@ -15,7 +15,7 @@ The current reference app:
 - can mock the Polyphonic authorization token when TMSv2 is unavailable;
 - keeps Keycloak and Polyphonic authorization tokens in browser memory only;
 - coordinates inactivity state between same-origin tabs without sharing tokens;
-- displays basic profile, authorization, and session-policy state after authentication.
+- displays diagnostic profile, token, authorization, refresh, and session-policy state after authentication.
 
 ## Architecture Document
 

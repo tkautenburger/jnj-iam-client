@@ -12,9 +12,19 @@ import React, {
   useState
 } from "react";
 import { createMockAuthorizationToken, expiresWithin, normalizeAuthorizationToken, readAuthorizationClaims } from "./jwt";
-import type { AuthContextValue, AuthStatus, AuthorizationClaims, PublicAuthConfig, UserProfile } from "./types";
+import type {
+  AuthContextValue,
+  AuthStatus,
+  AuthorizationClaims,
+  PublicAuthConfig,
+  TokenRefreshEvent,
+  TokenSnapshot,
+  UserProfile
+} from "./types";
 
 const TOKEN_REFRESH_LEEWAY_SECONDS = 30;
+const BACKGROUND_TOKEN_CHECK_MS = 5 * 1000;
+const INACTIVITY_DISPLAY_UPDATE_MS = 5 * 1000;
 const ACTIVITY_EVENTS = ["keydown", "pointerdown", "pointermove", "touchstart", "click"] as const;
 const ACTIVITY_CHANNEL = "polyphonic-iam-activity";
 
@@ -36,6 +46,13 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authorizationClaims, setAuthorizationClaims] = useState<AuthorizationClaims | null>(null);
+  const [tokens, setTokens] = useState<TokenSnapshot>({
+    accessToken: null,
+    idToken: null,
+    refreshToken: null
+  });
+  const [inactivityRemainingMs, setInactivityRemainingMs] = useState<number | null>(null);
+  const [lastTokenRefresh, setLastTokenRefresh] = useState<TokenRefreshEvent | null>(null);
   const [lastActivityAt, setLastActivityAt] = useState(() => Date.now());
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 
@@ -104,7 +121,17 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     setStatus("access-denied");
   }, []);
 
-  const ensureValidAccessToken = useCallback(async () => {
+  const syncTokenSnapshot = useCallback(() => {
+    const keycloak = keycloakRef.current;
+
+    setTokens({
+      accessToken: keycloak?.token ?? null,
+      idToken: keycloak?.idToken ?? null,
+      refreshToken: keycloak?.refreshToken ?? null
+    });
+  }, []);
+
+  const ensureValidAccessToken = useCallback(async (source: TokenRefreshEvent["source"] = "api") => {
     const keycloak = keycloakRef.current;
 
     if (!keycloak?.authenticated) {
@@ -112,7 +139,15 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     }
 
     try {
-      await keycloak.updateToken(TOKEN_REFRESH_LEEWAY_SECONDS);
+      const refreshed = await keycloak.updateToken(TOKEN_REFRESH_LEEWAY_SECONDS);
+      syncTokenSnapshot();
+
+      if (refreshed) {
+        setLastTokenRefresh({
+          refreshedAt: new Date().toLocaleTimeString(),
+          source
+        });
+      }
     } catch (refreshError) {
       setError(formatAuthError(refreshError));
       await login();
@@ -124,7 +159,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     }
 
     return keycloak.token;
-  }, [login]);
+  }, [login, syncTokenSnapshot]);
 
   const getAccessToken = useCallback(() => ensureValidAccessToken(), [ensureValidAccessToken]);
 
@@ -268,6 +303,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
         }
 
         setUser(getProfile(keycloak.tokenParsed));
+        syncTokenSnapshot();
         try {
           await requestAuthorizationToken();
         } catch (authorizationError) {
@@ -292,7 +328,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     }
 
     initialize();
-  }, [config, enterAccessDenied, requestAuthorizationToken]);
+  }, [config, enterAccessDenied, requestAuthorizationToken, syncTokenSnapshot]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -334,6 +370,12 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       return;
     }
 
+    const updateRemaining = () => {
+      setInactivityRemainingMs(Math.max(config.inactivityTimeoutMs - (Date.now() - lastActivityAt), 0));
+    };
+
+    updateRemaining();
+
     const timer = window.setInterval(() => {
       const idleMs = Date.now() - lastActivityAt;
       const remainingMs = config.inactivityTimeoutMs - idleMs;
@@ -346,8 +388,53 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       setShowInactivityWarning(remainingMs <= config.inactivityWarningMs);
     }, 1000);
 
-    return () => window.clearInterval(timer);
+    const displayTimer = window.setInterval(updateRemaining, INACTIVITY_DISPLAY_UPDATE_MS);
+
+    return () => {
+      window.clearInterval(timer);
+      window.clearInterval(displayTimer);
+      setInactivityRemainingMs(null);
+    };
   }, [config.inactivityTimeoutMs, config.inactivityWarningMs, lastActivityAt, logout, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
+      return;
+    }
+
+    let refreshInProgress = false;
+
+    const timer = window.setInterval(() => {
+      const keycloak = keycloakRef.current;
+
+      if (!keycloak?.authenticated || refreshInProgress) {
+        return;
+      }
+
+      refreshInProgress = true;
+      keycloak
+        .updateToken(TOKEN_REFRESH_LEEWAY_SECONDS)
+        .then((refreshed) => {
+          syncTokenSnapshot();
+
+          if (refreshed) {
+            setLastTokenRefresh({
+              refreshedAt: new Date().toLocaleTimeString(),
+              source: "background"
+            });
+          }
+        })
+        .catch((refreshError) => {
+          setError(formatAuthError(refreshError));
+          void login();
+        })
+        .finally(() => {
+          refreshInProgress = false;
+        });
+    }, BACKGROUND_TOKEN_CHECK_MS);
+
+    return () => window.clearInterval(timer);
+  }, [login, status, syncTokenSnapshot]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -356,6 +443,10 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       authenticated: status === "authenticated",
       user,
       authorizationClaims,
+      authorizationTokenMocked: config.mockAuthorizationToken,
+      tokens,
+      inactivityRemainingMs,
+      lastTokenRefresh,
       error,
       login,
       logout,
@@ -369,15 +460,19 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     [
       authenticatedFetch,
       authorizationClaims,
+      config.mockAuthorizationToken,
       ensureValidAccessToken,
       ensureValidAuthorizationToken,
       error,
       getAccessToken,
       getAuthorizationToken,
+      inactivityRemainingMs,
+      lastTokenRefresh,
       login,
       logout,
       recordActivity,
       status,
+      tokens,
       user
     ]
   );

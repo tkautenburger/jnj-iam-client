@@ -52,10 +52,19 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Display an access-denied screen when `X-Authorization` is absent or malformed.
 - [x] Refresh the Polyphonic authorization token at least 30 seconds before its `exp` value.
 - [x] Keep Keycloak tokens and the Polyphonic authorization token in memory only.
+- [x] Show the current access token in the reference UI.
+- [x] Show the current ID token in the reference UI.
+- [x] Show the current refresh token in the reference UI.
+- [x] Show background token refresh timestamp/source in the reference UI.
+- [x] Use a compact diagnostic layout with dense status/config grids.
+- [x] Keep long token values inside fixed-height scroll areas.
 - [x] Implement a centralized browser API client that sends `Authorization` and `X-Authorization`.
 - [x] Decode the Polyphonic authorization token for frontend convenience claims where needed.
+- [x] Mark authorization claims as mocked when mock authorization-token mode is enabled.
 - [x] Do not parse Keycloak `resource_access` in frontend authorization logic.
 - [x] Implement configurable inactivity timeout.
+- [x] Show inactivity timeout countdown in the reference UI.
+- [x] Update displayed inactivity countdown every 5 seconds.
 - [x] Track only intentional user activity: keyboard, mouse/pointer, touch, navigation, and equivalent user interactions.
 - [x] Exclude token refreshes, polling, timers, WebSocket traffic, and background API calls from activity tracking.
 - [x] Add a session-expiration warning dialog before inactivity logout.

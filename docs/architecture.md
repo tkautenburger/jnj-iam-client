@@ -149,6 +149,8 @@ The inactivity timeout shall be externally configurable per deployment environme
 
 The user shall be warned shortly before the inactivity timeout expires. The reference implementation shall use 60 seconds before timeout as its example/default warning lead time, and this value shall be externally configurable. The warning shall be displayed as an application dialog with an explicit action that records user activity and extends the session. If the user does not react before the timeout expires, the application shall initiate Keycloak logout.
 
+The reference application shall display the inactivity timeout countdown and update that displayed value every 5 seconds. Protocol activity such as background token refresh must not alter this countdown.
+
 ### Token Lifecycle
 
 Access and refresh tokens shall remain under the control of the `keycloak-js` client and **shall remain in browser memory**. They shall not be persisted to `localStorage`, `sessionStorage`, IndexedDB, or another application-managed persistent browser store.
@@ -160,6 +162,12 @@ await keycloak.updateToken(30);
 ```
 
 Failure to refresh a token shall transition the application into an unauthenticated state and trigger the defined re-authentication or logout behavior.
+
+The reference application includes a diagnostic token view for local validation. It displays the current access token, ID token, and refresh token as read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
+
+The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
+
+The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI.
 
 The existing Okta implementation stores authentication tokens in `localStorage`. The Keycloak implementation intentionally changes this behavior:
 
@@ -194,6 +202,8 @@ If the TMSv2 token request fails, or if the `X-Authorization` response header is
 The Polyphonic authorization token contains an `exp` claim. The frontend shall refresh the authorization token at least 30 seconds before expiry. The TMSv2 authorization token is tenant- and application-scoped and is tied to the Keycloak access-token lifetime.
 
 For local and test environments where TMSv2 is not available, the reference implementation shall support a configurable mock authorization-token mode. Mock mode shall generate an in-memory JWT-shaped token with the same frontend claims (`app`, `tnt`, `roles`, `exp`) and shall bypass the TMSv2 HTTP request. The mock token is unsigned and exists only to exercise frontend behavior; it must not be treated as a production authorization artifact and must not be accepted by real backend services.
+
+When mock authorization-token mode is enabled, the reference UI shall explicitly mark the authorization claims as mocked.
 
 Reference implementation:
 
