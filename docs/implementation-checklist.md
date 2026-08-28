@@ -60,6 +60,8 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Update displayed access-token expiry countdown every 5 seconds.
 - [x] Show background token refresh timestamp/source in the reference UI.
 - [x] Use a compact diagnostic layout with dense status/config grids.
+- [x] Remove separate profile tile because decoded ID token contains profile claims.
+- [x] Show timer parameters as label/value fields instead of JSON.
 - [x] Keep long token values inside fixed-height scroll areas.
 - [x] Implement a centralized browser API client that sends `Authorization` and `X-Authorization`.
 - [x] Decode the Polyphonic authorization token for frontend convenience claims where needed.

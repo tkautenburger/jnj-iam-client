@@ -90,21 +90,23 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
 
       {auth.status === "authenticated" && (
         <section className="grid">
-          <TokenCard title="Profile" value={auth.user} />
           <TokenCard
             title={`Authorization Claims${auth.authorizationTokenMocked ? " (mocked)" : ""}`}
             value={auth.authorizationClaims}
           />
-          <TokenCard
-            title="Session Policy"
-            value={{
-              inactivityTimeoutMs: config.inactivityTimeoutMs,
-              inactivityWarningMs: config.inactivityWarningMs,
-              inactivityRemainingMs: auth.inactivityRemainingMs,
-              tokenRefreshLeewaySeconds: 30,
-              backgroundTokenCheckMs: 5000,
-              lastTokenRefresh: auth.lastTokenRefresh
-            }}
+          <TimerCard
+            values={[
+              ["Inactivity timeout", formatDuration(config.inactivityTimeoutMs)],
+              ["Warning lead time", formatDuration(config.inactivityWarningMs)],
+              ["Inactivity remaining", formatDuration(auth.inactivityRemainingMs)],
+              ["Access token expires in", formatDuration(auth.accessTokenExpiresInMs)],
+              ["Token refresh leeway", "0:30"],
+              ["Background token check", "0:05"],
+              [
+                "Last token refresh",
+                auth.lastTokenRefresh ? `${auth.lastTokenRefresh.refreshedAt} (${auth.lastTokenRefresh.source})` : "none"
+              ]
+            ]}
           />
           <TokenCard title="Access Token" value={auth.tokens.accessTokenParsed} />
           <TokenCard title="ID Token" value={auth.tokens.idTokenParsed} />
@@ -142,6 +144,22 @@ function TokenCard({ title, value }: { title: string; value: unknown }) {
     <article className="token-card">
       <h2>{title}</h2>
       <pre>{typeof value === "string" ? value : JSON.stringify(value ?? null, null, 2)}</pre>
+    </article>
+  );
+}
+
+function TimerCard({ values }: { values: Array<[string, string]> }) {
+  return (
+    <article className="token-card">
+      <h2>Timer Parameters</h2>
+      <dl className="timer-details">
+        {values.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
     </article>
   );
 }
