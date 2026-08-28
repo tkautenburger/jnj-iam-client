@@ -8,7 +8,7 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
   const auth = useAuth();
   const [tokenCheckResult, setTokenCheckResult] = useState<string | null>(null);
 
-  async function refreshTokens() {
+  async function validateTokens() {
     setTokenCheckResult(null);
     await auth.ensureValidAccessToken("manual");
     await auth.ensureValidAuthorizationToken();
@@ -76,8 +76,8 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
         <div className="actions">
           {auth.status === "authenticated" && (
             <>
-              <button onClick={refreshTokens} className="secondary">
-                Refresh tokens
+              <button onClick={validateTokens} className="secondary">
+                Validate tokens
               </button>
               <button onClick={auth.logout}>Sign out</button>
             </>

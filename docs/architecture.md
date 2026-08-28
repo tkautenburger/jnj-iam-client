@@ -175,6 +175,8 @@ This diagnostic display is part of the reference/test surface and must not be co
 
 The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI. The UI also displays the access-token expiry countdown and update it every 5 seconds.
 
+The reference UI includes a manual token-validation action. This action calls the same access-token and authorization-token validity checks used by the API client. It does not force Keycloak to issue a new token; `keycloak.updateToken(30)` refreshes only when the current access token expires within the configured 30-second leeway.
+
 The existing Okta implementation stores authentication tokens in `localStorage`. The Keycloak implementation intentionally changes this behavior:
 
 - a page reload starts a new `keycloak-js` instance without persisted application tokens;

@@ -60,6 +60,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Show access-token expiry countdown in the reference UI.
 - [x] Update displayed access-token expiry countdown every 5 seconds.
 - [x] Show background token refresh timestamp/source in the reference UI.
+- [x] Label the manual token action as validation because it only refreshes tokens when they are inside the configured refresh leeway.
 - [x] Use a compact diagnostic layout with dense status/config grids.
 - [x] Use 3-column diagnostic tiles on wide screens.
 - [x] Remove separate profile tile because decoded ID token contains profile claims.
