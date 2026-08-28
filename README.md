@@ -47,6 +47,8 @@ These defaults match the local `jnj-iam` realm import conventions. Browser app c
 
 The protected reference app uses Keycloak `login-required` startup behavior so reopening the app can reuse an existing Keycloak SSO session and, when no SSO session exists, show the hosted login page. Silent SSO remains configurable for optional `check-sso` experiments, but iframe-based silent checks are disabled by default because they are sensitive to browser cookie policy and local TLS/hostname setup.
 
+With `login-required`, seeing a short redirect through Keycloak at startup is expected. SSO is working when Keycloak immediately redirects back without showing the login form. If the browser stays on the login form after closing and reopening the browser, check whether the Keycloak SSO cookie is persistent across browser restarts for the configured Keycloak host.
+
 `EXT_JNJ_MOCK_AUTHORIZATION_TOKEN=true` lets the reference app run without a TMSv2 backend. The generated token is an unsigned JWT-shaped test token and must not be used as a production authorization artifact.
 
 ## Run

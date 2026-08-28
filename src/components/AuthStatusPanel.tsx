@@ -107,10 +107,9 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
           />
           <TokenCard title="Access Token" value={auth.tokens.accessTokenParsed} />
           <TokenCard title="ID Token" value={auth.tokens.idTokenParsed} />
-          <TokenCard
-            title={`Authorization Token${auth.authorizationTokenMocked ? " (mocked)" : ""}`}
-            value={auth.tokens.authorizationTokenParsed ?? auth.authorizationClaims}
-          />
+          {!auth.authorizationTokenMocked && (
+            <TokenCard title="Authorization Token" value={auth.tokens.authorizationTokenParsed ?? auth.authorizationClaims} />
+          )}
         </section>
       )}
 

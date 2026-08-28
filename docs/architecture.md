@@ -110,6 +110,8 @@ Keycloak
 
 The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. The reference implementation uses Keycloak's `login-required` startup mode for the protected reference app so reopening the application can reuse an existing Keycloak SSO session immediately, while still redirecting to hosted login when no SSO session exists.
 
+With `login-required`, navigation through the Keycloak authorization endpoint on application startup is expected. Successful SSO restoration means Keycloak immediately redirects back to the application without asking for credentials. If the browser remains on the hosted login form, the Keycloak SSO cookie was not available, not sent, expired, or not accepted for the configured Keycloak origin.
+
 Keycloak documents `check-sso` as authenticating only when an existing Keycloak login is available. Silent `check-sso` can avoid a visible full-page redirect by using `silentCheckSsoRedirectUri`, but it is subject to modern browser third-party-cookie restrictions.
 
 The reference implementation makes silent SSO configurable and disables it by default for local/test reliability. If Keycloak returns a `login_required` or `interaction_required` result from a non-interactive SSO check, the frontend shall treat that as "no usable SSO session" and start the normal hosted login flow instead of rendering an authentication error.
@@ -165,7 +167,7 @@ await keycloak.updateToken(30);
 
 Failure to refresh a token shall transition the application into an unauthenticated state and trigger the defined re-authentication or logout behavior.
 
-The reference application includes a diagnostic token view for local validation. It displays the current access token, ID token, and Polyphonic authorization token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). The refresh token itself is not displayed; the top status panel shows only whether a refresh token is currently present. Because the decoded ID token already contains the user profile claims, the reference UI does not render a separate profile tile. This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
+The reference application includes a diagnostic token view for local validation. It displays the current access token and ID token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). When TMSv2 mode is active, it also displays the Polyphonic authorization token as decoded read-only debug output. When mock authorization-token mode is active, the top status panel marks authorization as mocked and the mocked authorization token is not displayed as a token tile. The refresh token itself is not displayed; the top status panel shows only whether a refresh token is currently present. Because the decoded ID token already contains the user profile claims, the reference UI does not render a separate profile tile. This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
 
 The diagnostic token view shall decode the current JWTs and display their header and payload as JSON clear text. The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and diagnostic tiles should use a 3-column layout on wide screens. Long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
 
@@ -207,7 +209,7 @@ The Polyphonic authorization token contains an `exp` claim. The frontend shall r
 
 For local and test environments where TMSv2 is not available, the reference implementation shall support a configurable mock authorization-token mode. Mock mode shall generate an in-memory JWT-shaped token with the same frontend claims (`app`, `tnt`, `roles`, `exp`) and shall bypass the TMSv2 HTTP request. The mock token is unsigned and exists only to exercise frontend behavior; it must not be treated as a production authorization artifact and must not be accepted by real backend services.
 
-When mock authorization-token mode is enabled, the reference UI shall explicitly mark the authorization claims as mocked.
+When mock authorization-token mode is enabled, the reference UI shall explicitly mark the authorization mode as mocked and shall not display the mocked authorization token as a diagnostic token tile.
 
 Reference implementation:
 
@@ -571,6 +573,7 @@ Session restoration behavior:
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Page reload                   | A new `keycloak-js` instance performs protected-app startup authentication and obtains a fresh token set when a usable Keycloak SSO session exists.                       |
 | New browser tab/window        | The new browser context performs its own SSO check and obtains its own token set.                                                                                        |
+| Full browser restart          | SSO is restored only if the Keycloak browser session cookie is still present and valid. If Keycloak uses a browser-session cookie and the browser clears it on restart, the user must authenticate again. |
 | No Keycloak SSO session       | Protected applications use `login-required` startup behavior or explicitly initiate interactive login when authentication is required.                                   |
 | Keycloak SSO session expired  | Token refresh or SSO restoration fails and the application transitions to re-authentication.                                                                             |
 | Explicit or inactivity logout | Keycloak logout terminates the shared SSO session; other tabs/applications detect this through the available Keycloak session mechanisms or on subsequent token refresh. |

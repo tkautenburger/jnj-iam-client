@@ -56,7 +56,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Show the current ID token in the reference UI.
 - [x] Show refresh-token presence indicator in the top status panel.
 - [x] Display token tiles as decoded JWT header/payload JSON.
-- [x] Show decoded authorization token as a diagnostic token tile.
+- [x] Show decoded authorization token as a diagnostic token tile only when TMSv2 mode is active.
 - [x] Show access-token expiry countdown in the reference UI.
 - [x] Update displayed access-token expiry countdown every 5 seconds.
 - [x] Show background token refresh timestamp/source in the reference UI.
@@ -69,7 +69,8 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Decode the Polyphonic authorization token for frontend convenience claims where needed.
 - [x] Derive profile information from the ID token.
 - [x] Expose `name`, `given_name`, and `family_name` through the decoded ID token diagnostics.
-- [x] Mark authorization claims as mocked when mock authorization-token mode is enabled.
+- [x] Mark authorization as mocked when mock authorization-token mode is enabled.
+- [x] Hide the authorization-token diagnostic tile when mock authorization-token mode is enabled.
 - [x] Do not parse Keycloak `resource_access` in frontend authorization logic.
 - [x] Implement configurable inactivity timeout.
 - [x] Show inactivity timeout countdown in the reference UI.
