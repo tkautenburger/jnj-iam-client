@@ -171,7 +171,7 @@ The reference application includes a diagnostic token view for local validation.
 
 This diagnostic display is part of the reference/test surface and must not be copied into normal production business screens.
 
-![](/Users/tkautenb/Library/Application%20Support/marktext/images/2026-08-28-11-35-12-image.png)
+![](/Users/tkautenb/Library/Application%20Support/marktext/images/2026-08-28-12-02-56-image.png)
 
 The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI. The UI also displays the access-token expiry countdown and update it every 5 seconds.
 
