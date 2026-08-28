@@ -108,7 +108,7 @@ Keycloak
        application B initiates interactive login
 ```
 
-The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. 
+The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. The reference implementation uses Keycloak's `login-required` startup mode for the protected reference app so reopening the application can reuse an existing Keycloak SSO session immediately, while still redirecting to hosted login when no SSO session exists.
 
 Keycloak documents `check-sso` as authenticating only when an existing Keycloak login is available. Silent `check-sso` can avoid a visible full-page redirect by using `silentCheckSsoRedirectUri`, but it is subject to modern browser third-party-cookie restrictions.
 
@@ -143,6 +143,8 @@ Because this logout terminates the shared Keycloak SSO session, it affects **all
 
 For multiple tabs or windows of the same application, user activity shall be coordinated so that an inactive background tab does not terminate the SSO session while the user is actively using another tab. Only the activity timestamp/state may be synchronized between browser contexts; OAuth tokens shall remain memory-only and shall not be shared through browser storage.
 
+Explicit logout and inactivity logout shall also be coordinated between same-origin tabs/windows. When one tab starts logout, it shall broadcast a logout event without token data. Other open tabs of the same application shall receive that event and invoke the same centralized Keycloak logout path.
+
 If Polyphonic applications are hosted on different origins and inactivity is intended to be evaluated across applications rather than independently per application, a separate cross-application activity coordination mechanism is required and must be defined explicitly. Cross-application activity coordination is not in scope of this project. 
 
 The inactivity timeout shall be externally configurable per deployment environment. The reference implementation shall use 15 minutes as its default value to comply with JnJ security requirements. 
@@ -163,9 +165,9 @@ await keycloak.updateToken(30);
 
 Failure to refresh a token shall transition the application into an unauthenticated state and trigger the defined re-authentication or logout behavior.
 
-The reference application includes a diagnostic token view for local validation. It displays the current access token, ID token, and refresh token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). Because the decoded ID token already contains the user profile claims, the reference UI does not render a separate profile tile. This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
+The reference application includes a diagnostic token view for local validation. It displays the current access token, ID token, and Polyphonic authorization token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). The refresh token itself is not displayed; the top status panel shows only whether a refresh token is currently present. Because the decoded ID token already contains the user profile claims, the reference UI does not render a separate profile tile. This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
 
-The diagnostic token view shall decode the current JWTs and display their header and payload as JSON clear text. The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
+The diagnostic token view shall decode the current JWTs and display their header and payload as JSON clear text. The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and diagnostic tiles should use a 3-column layout on wide screens. Long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
 
 The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI. The UI shall also display the access-token expiry countdown and update it every 5 seconds.
 
@@ -175,7 +177,7 @@ The existing Okta implementation stores authentication tokens in `localStorage`.
 
 - a page reload starts a new `keycloak-js` instance without persisted application tokens;
 - a newly opened tab or window starts without shared application tokens;
-- authentication state is re-established through the existing Keycloak SSO session using `check-sso` / non-interactive OIDC authentication;
+- authentication state is re-established through the existing Keycloak SSO session using protected-app startup authentication such as `login-required`, or optional `check-sso` / non-interactive OIDC authentication for applications that support an unauthenticated initial state;
 - each browser context receives and manages its own token set;
 - access, refresh, and ID tokens shall not be directly written to browser storage by the application.
 
@@ -352,7 +354,7 @@ export default function HomePage() {
 
 ### Application Initialization
 
-The Keycloak adapter shall be initialized after the application has entered the browser execution context. For applications that support SSO discovery, the preferred initialization pattern is:
+The Keycloak adapter shall be initialized after the application has entered the browser execution context. For optional SSO discovery without immediate interactive login, the initialization pattern is:
 
 ```ts
 await keycloak.init({
@@ -371,22 +373,17 @@ If no valid SSO session exists, the frontend shall explicitly invoke:
 await keycloak.login();
 ```
 
-Applications that exclusively contain authenticated functionality may alternatively use `login-required` where appropriate.
+Applications that exclusively contain authenticated functionality may use `login-required`. The reference implementation uses this mode because the application is protected by default and should restore an existing SSO session when a closed tab/window is reopened.
 
 Reference implementation:
 
 ```ts
 const authenticated = await keycloak.init({
-  onLoad: 'check-sso',
+  onLoad: 'login-required',
   pkceMethod: 'S256',
   redirectUri: config.redirectUri,
-  silentCheckSsoRedirectUri: config.silentCheckSsoRedirectUri,
   scope: config.scope
 });
-
-if (!authenticated) {
-  await keycloak.login({ redirectUri: config.redirectUri, scope: config.scope });
-}
 ```
 
 ### Silent SSO Resource
@@ -432,6 +429,8 @@ A dedicated browser-side inactivity manager shall track intentional user activit
 The inactivity timeout is evaluated independently by each Polyphonic frontend application. User activity in other Polyphonic applications does not reset the application's inactivity timer, and no cross-application inactivity synchronization is implemented. When the inactivity timeout of an application expires, the application initiates Keycloak logout, thereby terminating the shared Keycloak SSO session and consequently logging the user out of other Polyphonic applications as well.
 
 For multiple tabs or windows of the same application, user activity shall be coordinated so that an inactive background tab does not trigger logout while the user is actively using the same application in another tab or window. Only activity state shall be synchronized; authentication tokens must remain memory-only and must not be shared between browser contexts.
+
+Logout shall also be coordinated between same-origin tabs/windows by broadcasting only a logout event. Other tabs shall react by invoking the centralized logout function; no token data shall be broadcast.
 
 Conceptually:
 
@@ -570,9 +569,9 @@ Session restoration behavior:
 
 | Scenario                      | Target behavior                                                                                                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Page reload                   | A new `keycloak-js` instance performs `check-sso` and obtains a fresh token set when a usable Keycloak SSO session exists.                                               |
+| Page reload                   | A new `keycloak-js` instance performs protected-app startup authentication and obtains a fresh token set when a usable Keycloak SSO session exists.                       |
 | New browser tab/window        | The new browser context performs its own SSO check and obtains its own token set.                                                                                        |
-| No Keycloak SSO session       | `check-sso` returns unauthenticated; the application initiates interactive login when authentication is required.                                                        |
+| No Keycloak SSO session       | Protected applications use `login-required` startup behavior or explicitly initiate interactive login when authentication is required.                                   |
 | Keycloak SSO session expired  | Token refresh or SSO restoration fails and the application transitions to re-authentication.                                                                             |
 | Explicit or inactivity logout | Keycloak logout terminates the shared SSO session; other tabs/applications detect this through the available Keycloak session mechanisms or on subsequent token refresh. |
 

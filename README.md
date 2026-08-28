@@ -9,13 +9,13 @@ This project is the home for demo and playground applications that show how brow
 The current reference app:
 
 - reads public runtime configuration from server-side environment variables;
-- initializes `keycloak-js` with authorization code flow, PKCE, and SSO discovery;
+- initializes `keycloak-js` with authorization code flow, PKCE, and protected-app SSO restoration;
 - redirects to hosted Keycloak login when no SSO session exists;
 - requests the Polyphonic authorization token from TMSv2;
 - can mock the Polyphonic authorization token when TMSv2 is unavailable;
 - keeps Keycloak and Polyphonic authorization tokens in browser memory only;
 - coordinates inactivity state between same-origin tabs without sharing tokens;
-- displays diagnostic profile, decoded token, authorization, refresh, and session-policy state after authentication.
+- displays diagnostic decoded token, authorization, refresh, and session-policy state after authentication.
 
 ## Architecture Document
 
@@ -45,7 +45,7 @@ EXT_JNJ_IAM_INACTIVITY_WARNING_TIMEOUT=60000
 
 These defaults match the local `jnj-iam` realm import conventions. Browser app clients use `/signin` as the login redirect path, `/sso-signin` as the silent SSO redirect path, and the application root URL as the post-logout redirect URI.
 
-Silent SSO is configurable and defaults to disabled in the reference app because iframe-based silent checks are sensitive to browser cookie policy and local TLS/hostname setup. With silent SSO disabled, `check-sso` can still perform a non-interactive prompt=none redirect; if Keycloak reports `login_required`, the app starts the normal hosted login flow.
+The protected reference app uses Keycloak `login-required` startup behavior so reopening the app can reuse an existing Keycloak SSO session and, when no SSO session exists, show the hosted login page. Silent SSO remains configurable for optional `check-sso` experiments, but iframe-based silent checks are disabled by default because they are sensitive to browser cookie policy and local TLS/hostname setup.
 
 `EXT_JNJ_MOCK_AUTHORIZATION_TOKEN=true` lets the reference app run without a TMSv2 backend. The generated token is an unsigned JWT-shaped test token and must not be used as a production authorization artifact.
 

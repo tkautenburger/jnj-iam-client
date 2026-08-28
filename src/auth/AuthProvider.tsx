@@ -56,9 +56,10 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     accessToken: null,
     idToken: null,
     refreshToken: null,
+    authorizationToken: null,
     accessTokenParsed: null,
     idTokenParsed: null,
-    refreshTokenParsed: null
+    authorizationTokenParsed: null
   });
   const [inactivityRemainingMs, setInactivityRemainingMs] = useState<number | null>(null);
   const [accessTokenExpiresInMs, setAccessTokenExpiresInMs] = useState<number | null>(null);
@@ -118,6 +119,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     setStatus("logging-out");
     authorizationTokenRef.current = null;
     setAuthorizationClaims(null);
+    activityChannelRef.current?.postMessage({ type: "logout" });
 
     await keycloakRef.current?.logout({
       redirectUri: config.postLogoutRedirectUri
@@ -136,14 +138,16 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     const accessToken = keycloak?.token ?? null;
     const idToken = keycloak?.idToken ?? null;
     const refreshToken = keycloak?.refreshToken ?? null;
+    const authorizationToken = authorizationTokenRef.current?.token ?? null;
 
     setTokens({
       accessToken,
       idToken,
       refreshToken,
+      authorizationToken,
       accessTokenParsed: tryDecodeJwt(accessToken ?? undefined),
       idTokenParsed: tryDecodeJwt(idToken ?? undefined),
-      refreshTokenParsed: tryDecodeJwt(refreshToken ?? undefined)
+      authorizationTokenParsed: tryDecodeJwt(authorizationToken ?? undefined)
     });
   }, []);
 
@@ -192,6 +196,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       const token = createMockAuthorizationToken(claims);
       authorizationTokenRef.current = { token, claims };
       setAuthorizationClaims(claims);
+      syncTokenSnapshot();
       return token;
     }
 
@@ -221,6 +226,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     const claims = readAuthorizationClaims(token);
     authorizationTokenRef.current = { token, claims };
     setAuthorizationClaims(claims);
+    syncTokenSnapshot();
     return token;
   }, [
     config.mockAuthorizationApp,
@@ -229,7 +235,8 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
     config.mockAuthorizationToken,
     config.tenantId,
     config.tmsV2RootUrl,
-    ensureValidAccessToken
+    ensureValidAccessToken,
+    syncTokenSnapshot
   ]);
 
   const ensureValidAuthorizationToken = useCallback(async () => {
@@ -294,7 +301,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
 
       try {
         const initOptions = {
-          onLoad: "check-sso" as const,
+          onLoad: "login-required" as const,
           pkceMethod: "S256" as const,
           checkLoginIframe: false,
           redirectUri: config.redirectUri,
@@ -359,6 +366,8 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
       if (event.data.type === "activity" && typeof event.data.timestamp === "number") {
         setLastActivityAt((current) => Math.max(current, event.data.timestamp ?? current));
         setShowInactivityWarning(false);
+      } else if (event.data.type === "logout") {
+        void logout();
       }
     };
 
@@ -373,7 +382,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
         window.removeEventListener(eventName, updateFromEvent);
       }
     };
-  }, [recordActivity, status]);
+  }, [logout, recordActivity, status]);
 
   useEffect(() => {
     if (status === "authenticated") {

@@ -30,6 +30,7 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
             <div className="status-metrics">
               <Metric label="Idle" value={formatDuration(auth.inactivityRemainingMs)} />
               <Metric label="Access Exp" value={formatDuration(auth.accessTokenExpiresInMs)} />
+              <Metric label="Refresh Token" value={auth.tokens.refreshToken ? "present" : "missing"} />
               <Metric
                 label="Refresh"
                 value={auth.lastTokenRefresh ? `${auth.lastTokenRefresh.refreshedAt} (${auth.lastTokenRefresh.source})` : "none"}
@@ -90,10 +91,6 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
 
       {auth.status === "authenticated" && (
         <section className="grid">
-          <TokenCard
-            title={`Authorization Claims${auth.authorizationTokenMocked ? " (mocked)" : ""}`}
-            value={auth.authorizationClaims}
-          />
           <TimerCard
             values={[
               ["Inactivity timeout", formatDuration(config.inactivityTimeoutMs)],
@@ -110,7 +107,10 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
           />
           <TokenCard title="Access Token" value={auth.tokens.accessTokenParsed} />
           <TokenCard title="ID Token" value={auth.tokens.idTokenParsed} />
-          <TokenCard title="Refresh Token" value={auth.tokens.refreshTokenParsed} />
+          <TokenCard
+            title={`Authorization Token${auth.authorizationTokenMocked ? " (mocked)" : ""}`}
+            value={auth.tokens.authorizationTokenParsed ?? auth.authorizationClaims}
+          />
         </section>
       )}
 

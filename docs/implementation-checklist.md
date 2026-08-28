@@ -36,7 +36,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Expose an auth context/hook for application components.
 - [x] Model auth states explicitly: initializing, authenticated, unauthenticated, access denied, error, logging out.
 - [x] Initialize Keycloak with Authorization Code Flow and PKCE `S256`.
-- [x] Run `check-sso` on startup, then call `login()` automatically if no SSO session is available.
+- [x] Use `login-required` on startup for the protected reference app so an existing SSO session is reused and hosted login is shown when no SSO session is available.
 - [x] Treat `login_required` and `interaction_required` from SSO checks as no-session results that trigger hosted login.
 - [x] Add `/signin` handling for login redirects.
 - [x] Add `/sso-signin` handling for silent SSO redirects.
@@ -54,19 +54,21 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Keep Keycloak tokens and the Polyphonic authorization token in memory only.
 - [x] Show the current access token in the reference UI.
 - [x] Show the current ID token in the reference UI.
-- [x] Show the current refresh token in the reference UI.
+- [x] Show refresh-token presence indicator in the top status panel.
 - [x] Display token tiles as decoded JWT header/payload JSON.
+- [x] Show decoded authorization token as a diagnostic token tile.
 - [x] Show access-token expiry countdown in the reference UI.
 - [x] Update displayed access-token expiry countdown every 5 seconds.
 - [x] Show background token refresh timestamp/source in the reference UI.
 - [x] Use a compact diagnostic layout with dense status/config grids.
+- [x] Use 3-column diagnostic tiles on wide screens.
 - [x] Remove separate profile tile because decoded ID token contains profile claims.
 - [x] Show timer parameters as label/value fields instead of JSON.
 - [x] Keep long token values inside fixed-height scroll areas.
 - [x] Implement a centralized browser API client that sends `Authorization` and `X-Authorization`.
 - [x] Decode the Polyphonic authorization token for frontend convenience claims where needed.
 - [x] Derive profile information from the ID token.
-- [x] Include `name`, `given_name`, and `family_name` in the displayed profile.
+- [x] Expose `name`, `given_name`, and `family_name` through the decoded ID token diagnostics.
 - [x] Mark authorization claims as mocked when mock authorization-token mode is enabled.
 - [x] Do not parse Keycloak `resource_access` in frontend authorization logic.
 - [x] Implement configurable inactivity timeout.
@@ -80,9 +82,11 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Coordinate activity between same-origin tabs/windows using activity timestamps only.
 - [x] Do not store or broadcast OAuth tokens or authorization tokens.
 - [x] Make explicit logout and inactivity logout use the same centralized logout path.
+- [x] Propagate logout across same-origin tabs/windows without sharing token data.
 - [x] Add access-denied behavior for failed application-access checks.
 - [x] Externalize all IAM, TMSv2, redirect, silent SSO, and inactivity settings.
 - [x] Make iframe-based silent SSO configurable and disabled by default for local/test reliability.
+- [x] Use `login-required` startup mode for the protected reference app to restore existing SSO sessions on reopen.
 - [x] Externalize mock authorization-token settings.
 - [x] Read public Next.js runtime configuration from server-side environment variables.
 - [x] Pass only serializable non-secret public configuration into the browser auth boundary.

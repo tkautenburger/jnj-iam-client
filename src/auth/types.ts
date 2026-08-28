@@ -39,9 +39,10 @@ export type TokenSnapshot = {
   accessToken: string | null;
   idToken: string | null;
   refreshToken: string | null;
+  authorizationToken: string | null;
   accessTokenParsed: Record<string, unknown> | null;
   idTokenParsed: Record<string, unknown> | null;
-  refreshTokenParsed: Record<string, unknown> | null;
+  authorizationTokenParsed: Record<string, unknown> | null;
 };
 
 export type TokenRefreshEvent = {
