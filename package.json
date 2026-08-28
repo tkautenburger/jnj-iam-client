@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --hostname localhost",
+    "dev:local": "./scripts/start-local.sh",
+    "dev:public": "./scripts/start-public.sh",
     "build": "next build",
     "start": "next start --hostname localhost"
   },

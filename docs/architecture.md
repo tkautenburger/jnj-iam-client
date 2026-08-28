@@ -108,7 +108,7 @@ Keycloak
        application B initiates interactive login
 ```
 
-The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. The reference implementation uses Keycloak's `login-required` startup mode for the protected reference app so startup always goes through the Keycloak authorization flow and can reuse an existing Keycloak SSO session when the browser still has a valid Keycloak session cookie.
+The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. The reference implementation defaults to Keycloak's `login-required` startup mode so startup always goes through the Keycloak authorization flow and can reuse an existing Keycloak SSO session when the browser still has a valid Keycloak session cookie. The startup mode is externally configurable as `login-required` or `check-sso`.
 
 With `login-required`, navigation through the Keycloak authorization endpoint on application startup is expected. Successful SSO restoration means Keycloak immediately redirects back to the application without asking for credentials. If the browser remains on the hosted login form, the Keycloak SSO cookie was not available, not sent, expired, or not accepted for the configured Keycloak origin.
 
@@ -362,13 +362,13 @@ While initialization is in progress, protected application content shall not be 
 await keycloak.login();
 ```
 
-Applications that exclusively contain authenticated functionality, display or process sensitive data, or operate in environments with shared workstations shall use `login-required`. The reference implementation uses this mode because the application is protected by default. This does not persist application authentication state and does not create an SSO session by itself. It only asks Keycloak to authenticate immediately; Keycloak can complete that request without showing the login form only when the browser sends a valid Keycloak SSO cookie for the configured Keycloak origin.
+Applications that exclusively contain authenticated functionality, display or process sensitive data, or operate in environments with shared workstations shall use `login-required`. The reference implementation defaults to this mode because the application is protected by default. This does not persist application authentication state and does not create an SSO session by itself. It only asks Keycloak to authenticate immediately; Keycloak can complete that request without showing the login form only when the browser sends a valid Keycloak SSO cookie for the configured Keycloak origin.
 
 Reference implementation:
 
 ```ts
 const authenticated = await keycloak.init({
-  onLoad: 'login-required',
+  onLoad: config.startupMode,
   pkceMethod: 'S256',
   redirectUri: config.redirectUri,
   scope: config.scope
@@ -589,6 +589,7 @@ The following values should be configurable:
 | `EXT_JNJ_IAM_URL`                           | Base URL of the Keycloak IAM service used by the application for OIDC authentication.                                                                |
 | `EXT_JNJ_IAM_REALM_NAME`                    | Name of the Keycloak realm containing the application client and users. Base URL and realm construct the complete issuer URL.                        |
 | `EXT_JNJ_IAM_CLIENT_ID`                     | OIDC client identifier of the frontend application registered in Keycloak.                                                                           |
+| `EXT_JNJ_IAM_STARTUP_MODE`                  | Keycloak adapter startup mode. Supported values: `login-required` and `check-sso`. Defaults to `login-required`.                                    |
 | `EXT_JNJ_IAM_REDIRECT_URI`                  | Application URI to which Keycloak redirects the browser after authentication. Pattern: `${root-url}/signin`.                                         |
 | `EXT_JNJ_IAM_POST_LOGOUT_REDIRECT_URI`      | Application URI to which Keycloak redirects the browser after logout. Pattern: `${root-url}/`.                                                       |
 | `EXT_JNJ_IAM_SILENT_CHECK_SSO_REDIRECT_URI` | URI used by `keycloak-js` for silent SSO checks without an interactive login prompt. Pattern: `${root-url}/sso-signin`.                              |

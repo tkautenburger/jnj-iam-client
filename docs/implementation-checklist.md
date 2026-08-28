@@ -36,7 +36,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Expose an auth context/hook for application components.
 - [x] Model auth states explicitly: initializing, authenticated, unauthenticated, access denied, error, logging out.
 - [x] Initialize Keycloak with Authorization Code Flow and PKCE `S256`.
-- [x] Use `login-required` on startup for the protected reference app so an existing SSO session is reused and hosted login is shown when no SSO session is available.
+- [x] Make Keycloak startup mode configurable as `login-required` or `check-sso`, with `login-required` as the default.
 - [x] Treat `login_required` and `interaction_required` from SSO checks as no-session results that trigger hosted login.
 - [x] Add `/signin` handling for login redirects.
 - [x] Add `/sso-signin` handling for silent SSO redirects.
@@ -88,7 +88,7 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Add access-denied behavior for failed application-access checks.
 - [x] Externalize all IAM, TMSv2, redirect, silent SSO, and inactivity settings.
 - [x] Make iframe-based silent SSO configurable and disabled by default for local/test reliability.
-- [x] Use `login-required` startup mode for the protected reference app to restore existing SSO sessions on reopen.
+- [x] Use `login-required` as the default startup mode for the protected reference app.
 - [x] Externalize mock authorization-token settings.
 - [x] Read public Next.js runtime configuration from server-side environment variables.
 - [x] Pass only serializable non-secret public configuration into the browser auth boundary.

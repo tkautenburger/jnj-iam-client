@@ -4,6 +4,7 @@ const DEFAULT_SCOPE = "openid profile email nucleus";
 const DEFAULT_INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 const DEFAULT_INACTIVITY_WARNING_MS = 60 * 1000;
 const DEFAULT_MOCK_AUTHORIZATION_ROLES = ["user"];
+const DEFAULT_STARTUP_MODE = "login-required";
 
 function getRootUrl(): string {
   if (process.env.EXT_JNJ_ROOT_URL) {
@@ -50,6 +51,15 @@ function readList(name: string, fallback: string[]): string[] {
   return entries.length > 0 ? entries : fallback;
 }
 
+function readStartupMode(name: string): PublicAuthConfig["startupMode"] {
+  const value = process.env[name];
+  if (value === "check-sso" || value === "login-required") {
+    return value;
+  }
+
+  return DEFAULT_STARTUP_MODE;
+}
+
 export function getPublicAuthConfig(): PublicAuthConfig {
   const rootUrl = getRootUrl();
 
@@ -58,6 +68,7 @@ export function getPublicAuthConfig(): PublicAuthConfig {
     realm: process.env.EXT_JNJ_IAM_REALM_NAME ?? "phnc-dev",
     clientId: process.env.EXT_JNJ_IAM_CLIENT_ID ?? "phnc-test-app",
     scope: process.env.EXT_JNJ_IAM_SCOPE ?? DEFAULT_SCOPE,
+    startupMode: readStartupMode("EXT_JNJ_IAM_STARTUP_MODE"),
     redirectUri: process.env.EXT_JNJ_IAM_REDIRECT_URI ?? `${rootUrl}/signin`,
     postLogoutRedirectUri: process.env.EXT_JNJ_IAM_POST_LOGOUT_REDIRECT_URI ?? `${rootUrl}/`,
     silentCheckSsoRedirectUri: process.env.EXT_JNJ_IAM_SILENT_CHECK_SSO_REDIRECT_URI ?? `${rootUrl}/sso-signin`,

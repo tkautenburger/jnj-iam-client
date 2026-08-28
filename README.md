@@ -31,7 +31,10 @@ EXT_JNJ_IAM_URL=https://localhost
 EXT_JNJ_IAM_REALM_NAME=phnc-dev
 EXT_JNJ_IAM_CLIENT_ID=phnc-test-app
 EXT_JNJ_IAM_SCOPE="openid profile email nucleus"
+EXT_JNJ_IAM_STARTUP_MODE=login-required
+EXT_JNJ_IAM_REDIRECT_URI=http://localhost:3000/signin
 EXT_JNJ_IAM_POST_LOGOUT_REDIRECT_URI=http://localhost:3000/
+EXT_JNJ_IAM_SILENT_CHECK_SSO_REDIRECT_URI=http://localhost:3000/sso-signin
 EXT_JNJ_IAM_SILENT_CHECK_SSO_ENABLED=false
 EXT_JNJ_TMS_V2_ROOT_URL=http://localhost:3000
 EXT_JNJ_TENANT_ID=
@@ -45,7 +48,7 @@ EXT_JNJ_IAM_INACTIVITY_WARNING_TIMEOUT=60000
 
 These defaults match the local `jnj-iam` realm import conventions. Browser app clients use `/signin` as the login redirect path, `/sso-signin` as the silent SSO redirect path, and the application root URL as the post-logout redirect URI.
 
-The protected reference app uses Keycloak `login-required` startup behavior so reopening the app can reuse an existing Keycloak SSO session and, when no SSO session exists, show the hosted login page. Silent SSO remains configurable for optional `check-sso` experiments, but iframe-based silent checks are disabled by default because they are sensitive to browser cookie policy and local TLS/hostname setup.
+The protected reference app defaults to Keycloak `login-required` startup behavior so reopening the app can reuse an existing Keycloak SSO session and, when no SSO session exists, show the hosted login page. Set `EXT_JNJ_IAM_STARTUP_MODE=check-sso` to start with an SSO check and let the app explicitly call login when no SSO session is available. Silent SSO remains configurable for optional `check-sso` experiments, but iframe-based silent checks are disabled by default because they are sensitive to browser cookie policy and local TLS/hostname setup.
 
 With `login-required`, seeing a short redirect through Keycloak at startup is expected. SSO is working when Keycloak immediately redirects back without showing the login form. If the browser stays on the login form after closing and reopening the browser, check whether the Keycloak SSO cookie is persistent across browser restarts for the configured Keycloak host.
 
@@ -59,6 +62,30 @@ If you are on a JnJ workstation behind Zscaler you need to have the JnJ Artifact
 npm install [--registry https://artifactrepo.jnj.com/artifactory/api/npm/jnj-node/]
 npm run dev
 ```
+
+For local IAM testing, use the start script with explicit defaults:
+
+```bash
+npm run dev:local
+```
+
+For the public IAM endpoint, use:
+
+```bash
+npm run dev:public
+```
+
+Override only the values that differ for the current environment:
+
+```bash
+EXT_JNJ_IAM_CLIENT_ID=other-client \
+EXT_JNJ_IAM_REALM_NAME=other-realm \
+EXT_JNJ_IAM_STARTUP_MODE=check-sso \
+EXT_JNJ_MOCK_AUTHORIZATION_TOKEN=false \
+npm run dev:public
+```
+
+The local and public scripts are defined in `scripts/start-local.sh` and `scripts/start-public.sh`. They export all runtime variables used by the reference app before starting the Next.js dev server.
 
 Open:
 

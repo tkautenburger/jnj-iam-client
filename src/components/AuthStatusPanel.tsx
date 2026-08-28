@@ -52,6 +52,10 @@ export function AuthStatusPanel({ config }: { config: PublicAuthConfig }) {
               <dd>{config.clientId}</dd>
             </div>
             <div>
+              <dt>Startup Mode</dt>
+              <dd>{config.startupMode}</dd>
+            </div>
+            <div>
               <dt>Redirect URI</dt>
               <dd>{config.redirectUri}</dd>
             </div>

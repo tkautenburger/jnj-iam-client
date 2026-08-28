@@ -301,7 +301,7 @@ export function AuthProvider({ config, children }: { config: PublicAuthConfig; c
 
       try {
         const initOptions = {
-          onLoad: "login-required" as const,
+          onLoad: config.startupMode,
           pkceMethod: "S256" as const,
           checkLoginIframe: false,
           redirectUri: config.redirectUri,

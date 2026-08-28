@@ -3,6 +3,7 @@ export type PublicAuthConfig = {
   realm: string;
   clientId: string;
   scope: string;
+  startupMode: "login-required" | "check-sso";
   redirectUri: string;
   postLogoutRedirectUri: string;
   silentCheckSsoRedirectUri: string;
