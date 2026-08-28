@@ -99,29 +99,19 @@ This checklist tracks the work required to turn this repository into a reusable 
 - [x] Verify no application code writes tokens to `sessionStorage`.
 - [x] Verify no application code writes tokens to IndexedDB.
 - [x] Verify no token values are sent through `BroadcastChannel`.
-- [ ] Test initial login with no SSO session.
-- [ ] Test page reload with an existing Keycloak SSO session.
-- [ ] Test opening a new tab with an existing Keycloak SSO session.
-- [ ] Test SSO into a second Polyphonic application/client.
+- [x] Test initial login with no SSO session.
+- [x] Test page reload with an existing Keycloak SSO session.
+- [x] Test opening a new tab with an existing Keycloak SSO session.
+- [x] Test SSO into a second Polyphonic application/client.
 - [ ] Test denied application access with an existing SSO session.
 - [ ] Test access-token refresh before API calls.
 - [ ] Test refresh failure and re-authentication/logout behavior.
 - [ ] Test TMSv2 authorization-token retrieval and missing `X-Authorization` header behavior.
 - [ ] Test mock authorization-token mode without a TMSv2 backend.
 - [ ] Verify TMSv2 CORS allows `Authorization` and exposes `X-Authorization` when TMSv2 is cross-origin.
-- [ ] Test inactivity timeout logout.
-- [ ] Test inactivity warning extension.
-- [ ] Test same-origin multi-tab activity coordination.
+- [x] Test inactivity timeout logout.
+- [x] Test inactivity warning extension.
+- [x] Test same-origin multi-tab activity coordination.
 - [ ] Test silent SSO behavior in current Chrome.
 - [ ] Test silent SSO behavior in current Safari.
 - [ ] Test silent SSO behavior in current Microsoft Edge.
-
-## Remaining Details To Define
-
-- [x] Exact inactivity warning lead time: start with 60 seconds before timeout and keep it configurable.
-- [x] Expected behavior when TMSv2 token retrieval fails: display an access-denied screen.
-- [x] Expected behavior when the `X-Authorization` response header is absent or malformed: display an access-denied screen.
-- [x] Polyphonic authorization-token expiry and refresh behavior: token has `exp` and shall be refreshed at least 30 seconds before expiry.
-- [x] TMSv2 authorization-token scope/lifetime: tenant- and application-scoped, and tied to the Keycloak access-token lifetime.
-- [x] Public runtime configuration delivery for Next.js: read server-side environment variables and pass serializable non-secret config into the client auth boundary.
-- [x] Reference implementation packaging: start with app-local source, not an npm package.

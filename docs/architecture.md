@@ -6,7 +6,7 @@ The existing Polyphonic frontend applications are implemented using React and Ne
 
 As part of the migration from Okta to Keycloak, the applications must be refactored to use the `keycloak-js` client adapter and the standard OpenID Connect Authorization Code Flow with PKCE. Authentication shall be performed using the centrally hosted Keycloak login experience rather than an authentication widget embedded in the application.
 
-The target solution must preserve Polyphonic-specific application-access semantics and web SSO behavior. A successfully authenticated user may access a Polyphonic application only if a valid bearer token for targeted application client is presented. 
+The target solution must preserve Polyphonic-specific application-access semantics and web SSO behavior. A successfully authenticated user may access a Polyphonic application only if a valid bearer token for targeted application client is presented.
 
 The current Okta implementation persists authentication tokens in the browser's `localStorage`, allowing authentication state to survive page reloads and to be reused across browser tabs of the same origin. Persisting authentication tokens in the Browser's localStorage shall be avoided because any JavaScript executing within the application origin, including code introduced through an XSS vulnerability, can access and exfiltrate these bearer tokens, while persistence also extends their exposure across page reloads and browser tabs.
 
@@ -28,7 +28,7 @@ The refactoring shall:
 - centralize authentication behavior behind a reusable application authentication abstraction;
 - isolate browser-only authentication behavior from Next.js server-side rendering and Server Components;
 - minimize direct Keycloak dependencies in application business components;
-- avoid unnecessary and insecure persistent browser storage of access, and refresh tokens.
+- avoid unnecessary and insecure persistent browser storage of access tokens, and refresh tokens.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ The client shall use:
 - no Implicit Flow;
 - no Direct Access Grant / Resource Owner Password flow.
 
-Authentication shall be initiated through the `keycloak-js` client and performed using redirection to Keycloak-hosted authentication pages. The customization of Keycloak-hosted authentication pages to preserve the application's look and feel during login is not in scope of this project. 
+Authentication shall be initiated through the `keycloak-js` client and performed using redirection to Keycloak-hosted authentication pages. The customization of Keycloak-hosted authentication pages to preserve the application's look and feel during login is not in scope of this project.
 
 ### Next.js Client-Side Authentication Boundary
 
@@ -60,17 +60,17 @@ Authentication to a Polyphonic application requires explicit access to the targe
 
 The application-access check shall be executed for every interactive or SSO-based browser authentication that results in tokens for the requesting client. In particular, an existing Keycloak SSO session or successful cookie authentication shall not bypass the application-access check. If the user has no access to the requesting application, authentication for that client shall be rejected and no application token shall be issued.
 
-This behavior is ensured by the customized Keycloak authentication flows and is transparent to the web application. The general rule for the web application and its authentication process is: "If i receive an access token, the user is eligible to access the application, otherwise it is not".
+This behavior is ensured by the customized Keycloak authentication flows and is transparent to the web application. The general rule for the web application and its authentication process is: "If i receive an access token, the user is eligible to access the application".
 
 ### Token Claims
 
-Access tokens issued to normal Polyphonic applications do not expose Keycloak's standard `resource_access` claim. Application-specific authorization information required by frontend or backend services is exposed through the Polyphonic authorization token instead. Frontend applications shall therefore not depend on parsing the `resource_access` claim for authorization decisions.
+Access tokens issued to normal Polyphonic applications do not expose Keycloak's standard `resource_access` claim. Application-specific authorization information required by frontend or backend services is exposed through the Polyphonic authorization token instead. Frontend applications shall therefore not depend on parsing the `resource_access` claim for authorization decisions. Those claims are reserved for Keycloak web console applications only (account console, admin console).
 
-The Polyphonic authorization token is issued by the TMSv2 backend and contains the application authorization model used by frontend and backend services:
+The Polyphonic authorization token is issued by the TMSv2 backend and contains the authorization model used by frontend and backend services, including the following claims:
 
-- `app`: the authorized application;
-- `tnt`: the tenant for the user;
-- `roles`: the application roles assigned to the user in scope of the authorized application.
+- `app`: the authorized application identifier;
+- `tnt`: the tenant identifier for the user;
+- `roles`: the application roles assigned to the user in scope of the authorized application and tenant.
 
 ### Web SSO Between Polyphonic Applications
 
@@ -108,7 +108,7 @@ Keycloak
        application B initiates interactive login
 ```
 
-The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. The reference implementation uses Keycloak's `login-required` startup mode for the protected reference app so reopening the application can reuse an existing Keycloak SSO session immediately, while still redirecting to hosted login when no SSO session exists.
+The `check-sso` authentication method itself shall not force an interactive login. Polyphonic frontend applications are treated as protected applications by default. If no usable SSO session exists, the application shall invoke `keycloak.login()` and redirect the user to the hosted Keycloak login page for the targeted application. The reference implementation uses Keycloak's `login-required` startup mode for the protected reference app so startup always goes through the Keycloak authorization flow and can reuse an existing Keycloak SSO session when the browser still has a valid Keycloak session cookie.
 
 With `login-required`, navigation through the Keycloak authorization endpoint on application startup is expected. Successful SSO restoration means Keycloak immediately redirects back to the application without asking for credentials. If the browser remains on the hosted login form, the Keycloak SSO cookie was not available, not sent, expired, or not accepted for the configured Keycloak origin.
 
@@ -118,7 +118,7 @@ The reference implementation makes silent SSO configurable and disables it by de
 
 Each application shall receive a token set issued specifically for its own OIDC client. Tokens shall never be copied, shared, or transferred between Polyphonic applications.
 
-Embedded Keycloak login pages (iframe) should not be used. Interactive authentication shall use redirect-based OIDC authentication and a Polyphonic Keycloak theme for consistent branding. Iframes are limited to Keycloak-supported non-interactive SSO/session-check mechanisms.
+Embedded Keycloak login pages (Iframes) should not be used. Interactive authentication shall use redirect-based OIDC authentication and a Polyphonic Keycloak theme for consistent branding. Iframes are limited to Keycloak-supported non-interactive SSO/session-check mechanisms.
 
 ### Inactivity Logout
 
@@ -132,7 +132,7 @@ Activity that may reset the timer includes:
 - application navigation;
 - other intentional user interaction with the application.
 
-Background API calls, token refreshes, timers, polling, WebSocket traffic, and other technical activity shall **not** reset the inactivity timer. When the configured inactivity timeout expires, the application shall initiate a Keycloak logout rather than only clearing local authentication state. 
+Background API calls, token refreshes, timers, polling, WebSocket traffic, and other technical activity shall **not** reset the inactivity timer. When the configured inactivity timeout expires, the application shall initiate a Keycloak logout rather than only clearing local authentication state.
 
 The logout shall:
 
@@ -141,15 +141,15 @@ The logout shall:
 3. prevent further token renewal;
 4. redirect the browser to the configured post-logout location.
 
-Because this logout terminates the shared Keycloak SSO session, it affects **all Polyphonic applications** using that session.
+Because this logout terminates the shared Keycloak SSO session, it affects **all Polyphonic applications** using that session, e.g. a user having the Polyphonic Surgery web application and the Keycloak Account Console open at the same and logs out in one of the applications, also logs out the other application, because Keycloak SSO session does no longer exist.
 
 For multiple tabs or windows of the same application, user activity shall be coordinated so that an inactive background tab does not terminate the SSO session while the user is actively using another tab. Only the activity timestamp/state may be synchronized between browser contexts; OAuth tokens shall remain memory-only and shall not be shared through browser storage.
 
 Explicit logout and inactivity logout shall also be coordinated between same-origin tabs/windows. When one tab starts logout, it shall broadcast a logout event without token data. Other open tabs of the same application shall receive that event and invoke the same centralized Keycloak logout path.
 
-If Polyphonic applications are hosted on different origins and inactivity is intended to be evaluated across applications rather than independently per application, a separate cross-application activity coordination mechanism is required and must be defined explicitly. Cross-application activity coordination is not in scope of this project. 
+If Polyphonic applications are hosted on different origins and inactivity is intended to be evaluated across applications rather than independently per application, a separate cross-application activity coordination mechanism is required and must be defined explicitly. Cross-application activity coordination is not in scope of this project.
 
-The inactivity timeout shall be externally configurable per deployment environment. The reference implementation shall use 15 minutes as its default value to comply with JnJ security requirements. 
+The inactivity timeout shall be externally configurable per deployment environment. The reference implementation shall use 15 minutes as its default value to comply with JnJ security requirements.
 
 The user shall be warned shortly before the inactivity timeout expires. The reference implementation shall use 60 seconds before timeout as its example/default warning lead time, and this value shall be externally configurable. The warning shall be displayed as an application dialog with an explicit action that records user activity and extends the session. If the user does not react before the timeout expires, the application shall initiate Keycloak logout.
 
@@ -167,13 +167,13 @@ await keycloak.updateToken(30);
 
 Failure to refresh a token shall transition the application into an unauthenticated state and trigger the defined re-authentication or logout behavior.
 
-The reference application includes a diagnostic token view for local validation. It displays the current access token and ID token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). When TMSv2 mode is active, it also displays the Polyphonic authorization token as decoded read-only debug output. When mock authorization-token mode is active, the top status panel marks authorization as mocked and the mocked authorization token is not displayed as a token tile. The refresh token itself is not displayed; the top status panel shows only whether a refresh token is currently present. Because the decoded ID token already contains the user profile claims, the reference UI does not render a separate profile tile. This diagnostic display is part of the reference/test surface and should not be copied into normal production business screens.
+The reference application includes a diagnostic token view for local validation. It displays the current access token and ID token as decoded read-only debug output, and it records the last successful token refresh with the refresh source (`background`, `api`, or `manual`). When TMSv2 mode is active, it also displays the Polyphonic authorization token as decoded read-only debug output. When mock authorization-token mode is active, the top status panel marks authorization as mocked and the mocked authorization token is not displayed as a token tile. The refresh token itself is not displayed; the top status panel shows only whether a refresh token is currently present.
 
-The diagnostic token view shall decode the current JWTs and display their header and payload as JSON clear text. The diagnostic layout shall prioritize compact information density. Status metrics should be shown in a compact strip, configuration values should use a dense grid, and diagnostic tiles should use a 3-column layout on wide screens. Long token values should be contained in fixed-height scroll areas so the important authentication state remains visible without excessive vertical scrolling.
+This diagnostic display is part of the reference/test surface and must not be copied into normal production business screens.
 
-The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI. The UI shall also display the access-token expiry countdown and update it every 5 seconds.
+![](/Users/tkautenb/Library/Application%20Support/marktext/images/2026-08-28-11-35-12-image.png)
 
-Timer and refresh parameters shall be displayed as explicit label/value fields rather than raw JSON so the current session state can be scanned quickly.
+The reference implementation performs a background token-validity check every 5 seconds by calling `keycloak.updateToken(30)`. This does not reset the inactivity timer. If Keycloak actually refreshes the token, the token snapshot and refresh timestamp are updated in the diagnostic UI. The UI also displays the access-token expiry countdown and update it every 5 seconds.
 
 The existing Okta implementation stores authentication tokens in `localStorage`. The Keycloak implementation intentionally changes this behavior:
 
@@ -207,28 +207,15 @@ If the TMSv2 token request fails, or if the `X-Authorization` response header is
 
 The Polyphonic authorization token contains an `exp` claim. The frontend shall refresh the authorization token at least 30 seconds before expiry. The TMSv2 authorization token is tenant- and application-scoped and is tied to the Keycloak access-token lifetime.
 
-For local and test environments where TMSv2 is not available, the reference implementation shall support a configurable mock authorization-token mode. Mock mode shall generate an in-memory JWT-shaped token with the same frontend claims (`app`, `tnt`, `roles`, `exp`) and shall bypass the TMSv2 HTTP request. The mock token is unsigned and exists only to exercise frontend behavior; it must not be treated as a production authorization artifact and must not be accepted by real backend services.
+For local and test environments where TMSv2 is not available, the reference implementation supports a configurable mock authorization-token mode. Mock mode generates an in-memory JWT-shaped token with the same frontend claims (`app`, `tnt`, `roles`, `exp`) and bypasses the TMSv2 HTTP request. The mock token is unsigned and exists only to exercise frontend behavior; it must not be treated as a production authorization artifact and must not be accepted by real backend services.
 
-When mock authorization-token mode is enabled, the reference UI shall explicitly mark the authorization mode as mocked and shall not display the mocked authorization token as a diagnostic token tile.
+When mock authorization-token mode is enabled, the reference UI explicitly marks the authorization mode as mocked and does not display the mocked authorization token as a diagnostic token tile.
 
 Reference implementation:
 
 ```ts
 if (!cachedToken || expiresWithin(cachedToken.claims, 30)) {
   await requestAuthorizationToken();
-}
-```
-
-Mock-token reference implementation:
-
-```ts
-if (config.mockAuthorizationToken) {
-  return createMockAuthorizationToken({
-    app: config.mockAuthorizationApp,
-    tnt: config.mockAuthorizationTenant,
-    roles: config.mockAuthorizationRoles,
-    exp: Math.floor(Date.now() / 1000) + 90
-  });
 }
 ```
 
@@ -248,7 +235,7 @@ Authenticated Polyphonic API calls from SSR, Server Components, Server Actions, 
 
 ### Target Architecture
 
-The following diagram shows an overview of the authentication and authorization process flow for Polyphonic web applications. 
+The following diagram shows an overview of the authentication and authorization process flow for Polyphonic web applications.
 
 ```
 +---------------------------------------------------+
@@ -367,15 +354,13 @@ await keycloak.init({
 });
 ```
 
-While initialization is in progress, protected application content shall not be displayed.
-
-If no valid SSO session exists, the frontend shall explicitly invoke:
+While initialization is in progress, protected application content shall not be displayed. If no valid SSO session exists, the frontend shall explicitly invoke:
 
 ```ts
 await keycloak.login();
 ```
 
-Applications that exclusively contain authenticated functionality may use `login-required`. The reference implementation uses this mode because the application is protected by default and should restore an existing SSO session when a closed tab/window is reopened.
+Applications that exclusively contain authenticated functionality, display or process sensitive data, or operate in environments with shared workstations shall use `login-required`. The reference implementation uses this mode because the application is protected by default. This does not persist application authentication state and does not create an SSO session by itself. It only asks Keycloak to authenticate immediately; Keycloak can complete that request without showing the login form only when the browser sends a valid Keycloak SSO cookie for the configured Keycloak origin.
 
 Reference implementation:
 
@@ -480,7 +465,7 @@ The effective session terminates when the first applicable termination condition
 
 For same-origin tabs/windows, an activity-coordination mechanism such as `BroadcastChannel` may be used to propagate only the latest user-activity timestamp. Access and refresh tokens shall not be broadcast or stored for this purpose.
 
-If applications run on different origins, browser-native same-origin coordination mechanisms do not provide a shared activity state. 
+If applications run on different origins, browser-native same-origin coordination mechanisms do not provide a shared activity state.
 
 Reference implementation:
 
@@ -551,7 +536,7 @@ React / Next.js Application
               +-- ID token
 ```
 
-The Keycloak architecture stores token only in ephemeral browser memory: 
+The Keycloak architecture stores token only in ephemeral browser memory:
 
 ```text
 Target Keycloak Architecture
@@ -569,14 +554,15 @@ Next.js browser context
 
 Session restoration behavior:
 
-| Scenario                      | Target behavior                                                                                                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Page reload                   | A new `keycloak-js` instance performs protected-app startup authentication and obtains a fresh token set when a usable Keycloak SSO session exists.                       |
-| New browser tab/window        | The new browser context performs its own SSO check and obtains its own token set.                                                                                        |
+| Scenario                      | Target behavior                                                                                                                                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page reload                   | A new `keycloak-js` instance performs protected-app startup authentication and obtains a fresh token set when a usable Keycloak SSO session exists.                                                       |
+| New browser tab/window        | The new browser context performs its own protected-app startup authentication and obtains its own token set when the Keycloak SSO cookie is still valid.                                                  |
+| Closed app tab/window         | Reopening the application behaves like a new browser context. SSO works only if the browser retained and sends the Keycloak SSO cookie.                                                                   |
 | Full browser restart          | SSO is restored only if the Keycloak browser session cookie is still present and valid. If Keycloak uses a browser-session cookie and the browser clears it on restart, the user must authenticate again. |
-| No Keycloak SSO session       | Protected applications use `login-required` startup behavior or explicitly initiate interactive login when authentication is required.                                   |
-| Keycloak SSO session expired  | Token refresh or SSO restoration fails and the application transitions to re-authentication.                                                                             |
-| Explicit or inactivity logout | Keycloak logout terminates the shared SSO session; other tabs/applications detect this through the available Keycloak session mechanisms or on subsequent token refresh. |
+| No Keycloak SSO session       | Protected applications use `login-required` startup behavior or explicitly initiate interactive login when authentication is required.                                                                    |
+| Keycloak SSO session expired  | Token refresh or SSO restoration fails and the application transitions to re-authentication.                                                                                                              |
+| Explicit or inactivity logout | Keycloak logout terminates the shared SSO session; other tabs/applications detect this through the available Keycloak session mechanisms or on subsequent token refresh.                                  |
 
 ### Runtime Configuration
 
@@ -608,7 +594,7 @@ The following values should be configurable:
 | `EXT_JNJ_IAM_USER_INACTIVITY_TIMEOUT`       | Configurable period of user inactivity after which the application initiates logout and terminates the Keycloak SSO session, defaults to 15 minutes. |
 | `EXT_JNJ_TMS_V2_ROOT_URL`                   | Base URL of the TMSv2 backend service used to request the Polyphonic authorization token.                                                            |
 | `EXT_JNJ_TENANT_ID`                         | Optional tenant identifier appended to the TMSv2 authorization-token request as `tenantId`.                                                          |
-| `EXT_JNJ_MOCK_AUTHORIZATION_TOKEN`          | Enables mock authorization-token mode for local/test environments where TMSv2 is unavailable. Defaults to `true` in the reference implementation.     |
+| `EXT_JNJ_MOCK_AUTHORIZATION_TOKEN`          | Enables mock authorization-token mode for local/test environments where TMSv2 is unavailable. Defaults to `true` in the reference implementation.    |
 | `EXT_JNJ_MOCK_AUTHORIZATION_APP`            | Mock authorization-token `app` claim.                                                                                                                |
 | `EXT_JNJ_MOCK_AUTHORIZATION_TENANT`         | Mock authorization-token `tnt` claim.                                                                                                                |
 | `EXT_JNJ_MOCK_AUTHORIZATION_ROLES`          | Comma-separated mock authorization-token `roles` claim.                                                                                              |
@@ -616,7 +602,7 @@ The following values should be configurable:
 
 ### Reference Implementation Packaging
 
-This project shall provide app-local source as a copyable/reference example. The authentication implementation is not initially packaged as an npm dependency. A package can be introduced later if multiple applications need versioned dependency management for the shared authentication layer.
+This project provides app-local source as a copyable/reference example. The authentication implementation is not initially packaged as an npm dependency. A package can be introduced later if multiple applications need versioned dependency management for the shared authentication layer.
 
 ## Okta-to-Keycloak Refactoring Mapping
 
@@ -661,7 +647,7 @@ This project shall provide app-local source as a copyable/reference example. The
 
 - Polyphonic IAM Service: Redirect URIs and Web Origins shall be restricted as tightly as possible.
 
-- Polyphonic IAM Service: Application access shall be validated before tokens for the target client are issued.
+- Polyphonic IAM Service: Dedicated application access shall be validated before tokens for the target client are issued.
 
 ## Migration Considerations
 
